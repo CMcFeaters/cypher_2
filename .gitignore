@@ -1,0 +1,8 @@
+*.csv
+
+source_data/
+Lib/
+Scripts/
+Include/
+pyvenv.cfg
+*.txt
