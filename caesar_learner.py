@@ -37,115 +37,86 @@ tf.__version__
 # Part 1 - Data Preprocessing
 
 # Importing the dataset
-target='war_of_worlds'
+target='war_and_peace'
 dataset = pd.read_csv('./source_data/%s_eval.csv'%target)
 X = dataset.iloc[:, 1:-1].values	#inputs are all but the last column
 y = dataset.iloc[:, -1].values	#dependent variable is the last column
-print(X)
-print(y)
-'''
-# Encoding categorical data
-# Label Encoding the "Gender" column
-from sklearn.preprocessing import LabelEncoder
-le = LabelEncoder()
-X[:, 2] = le.fit_transform(X[:, 2])
-print(X)
-'''
+print("Original x/y shapes")
+print(X.shape)
+print(y.shape)
+
 # One Hot Encoding the "Geography" column
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 
-
-#lets=string.ascii_lowercase
-#cats=[let for let in lets]	#make our category array, contains all letters
-# integer encode
-'''
-label_encoder = LabelEncoder()
-integer_encoded = label_encoder.fit_transform(y)
-print(integer_encoded)
-onehot_encoder = OneHotEncoder(categories=cats,sparse=False)
-integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
-onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-print(onehot_encoded)
-'''
 #this has to be a category list, we can't get this as auto
 ct = ColumnTransformer(transformers=[('encoder', OneHotEncoder(), [0])], remainder='passthrough')
 #y=temp.reshape(-1, 1)
 y=y.reshape(-1,1)
-y = ct.fit_transform(y)
+#y = np.array(ct.fit_transform(y)).tolist()
 #print(ct.fit_transform(y))
-print(y)
-'''
+y = ct.fit_transform(y).toarray()	#we needto convert this from a csr_matrix to an NParray
+print("Y-shape")
+print(y.shape)
+print(type(y))
+
 # Splitting the dataset into the Training set and Test set
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
+
+print("************")
+print("Split complete")
+print("************")
 
 # Feature Scaling
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
 X_train = sc.fit_transform(X_train)
 X_test = sc.transform(X_test)
+print("x train/test shape")
+print(X_train.shape)
+print(X_test.shape)
+
+print("************")
+print("scaling complete")
+print("************")
 
 # Part 2 - Building the ANN
+from tensorflow import keras
+from tensorflow.keras import layers
 
-# Initializing the ANN
-ann = tf.keras.models.Sequential()
+inputs=keras.Input(shape=(26,))		#input layer is 1 node per frequency analysis
+dense=layers.Dense(26,activation="relu")	#create th hidden layer
 
-# Adding the input layer and the first hidden layer
-ann.add(tf.keras.layers.Dense(units=6, activation='relu'))
+ann=dense(inputs)	#put the inputs to the hideen layer
+outputs=layers.Dense(24)(ann)	#assign the outputs as part of the "ann" layer
 
-# Adding the second hidden layer
-ann.add(tf.keras.layers.Dense(units=6, activation='relu'))
+model=keras.Model(inputs=inputs,outputs=outputs, name="test_model")	#make the model
 
-# Adding the output layer
-ann.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+model.summary()	#lets see what this bad boy looks like
+print("Original x's")
+print(X_train.shape)
+print(X_test.shape)
 
-# Part 3 - Training the ANN
+#X_train = X_train.reshape(800, 26).astype("float32") / 255
+#X_test = X_test.reshape(200, 26).astype("float32") / 255
+print("RESHAPED x's")
+print(X_train.shape)
+print(X_test.shape)
 
-# Compiling the ANN
-ann.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
 
-# Training the ANN on the Training set
-ann.fit(X_train, y_train, batch_size = 32, epochs = 100)
+model.compile(
+    loss=keras.losses.CategoricalCrossentropy(from_logits=True),
+    optimizer=keras.optimizers.RMSprop(),
+    metrics=["accuracy"],
+)	#compiel our model 
 
-# Part 4 - Making the predictions and evaluating the model
+#current error
+print(type(X_train))
+print(type(y_train))
+history = model.fit(X_train, y_train, batch_size=1, epochs=2, validation_split=0.2)
 
-# Predicting the result of a single observation
+test_scores = model.evaluate(X_test, y_test, verbose=2)
+print("Test loss:", test_scores[0])
+print("Test accuracy:", test_scores[1])
 
-"""
-Homework:
-Use our ANN model to predict if the customer with the following informations will leave the bank: 
-Geography: France
-Credit Score: 600
-Gender: Male
-Age: 40 years old
-Tenure: 3 years
-Balance: $ 60000
-Number of Products: 2
-Does this customer have a credit card? Yes
-Is this customer an Active Member: Yes
-Estimated Salary: $ 50000
-So, should we say goodbye to that customer?
-
-Solution:
-"""
-
-print(ann.predict(sc.transform([[1, 0, 0, 600, 1, 40, 3, 60000, 2, 1, 1, 50000]])) > 0.5)
-
-"""
-Therefore, our ANN model predicts that this customer stays in the bank!
-Important note 1: Notice that the values of the features were all input in a double pair of square brackets. That's because the "predict" method always expects a 2D array as the format of its inputs. And putting our values into a double pair of square brackets makes the input exactly a 2D array.
-Important note 2: Notice also that the "France" country was not input as a string in the last column but as "1, 0, 0" in the first three columns. That's because of course the predict method expects the one-hot-encoded values of the state, and as we see in the first row of the matrix of features X, "France" was encoded as "1, 0, 0". And be careful to include these values in the first three columns, because the dummy variables are always created in the first columns.
-"""
-
-# Predicting the Test set results
-y_pred = ann.predict(X_test)
-y_pred = (y_pred > 0.5)
-print(np.concatenate((y_pred.reshape(len(y_pred),1), y_test.reshape(len(y_test),1)),1))
-
-# Making the Confusion Matrix
-from sklearn.metrics import confusion_matrix, accuracy_score
-cm = confusion_matrix(y_test, y_pred)
-print(cm)
-accuracy_score(y_test, y_pred)
-'''

@@ -76,9 +76,9 @@ if __name__=="__main__":
 	[block_name, A%, B%, ..., Z%, [array of key in the form of a_sub, b_sub, ...z_sub] where a_sub is the value that you substitute to decode "a" from the encoded text
 	'''
 	
-	source_name="war_of_worlds" #name of our source_file
+	source_name="war_and_peace" #name of our source_file
 	build_files(source_name)
-	num_blocks=500	#number of blocks
+	num_blocks=1000	#number of blocks
 	block_len=100 #number words in the block
 	csv_path=os.path.join("./source_data/",source_name+"_eval.csv")	#our csv file
 	letters=string.ascii_lowercase	#userd below
